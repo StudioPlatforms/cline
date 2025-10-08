@@ -837,6 +837,37 @@ export const ChatRowContent = memo(
 			}
 		}, [isCommandMessage, isCommandCompleted, isCommandExecuting])
 
+		// Auto-expand when command starts executing (only if running > 500ms)
+		useEffect(() => {
+			if (isCommandMessage && isCommandExecuting && !isExpanded) {
+				// Wait 500ms before auto-expanding to avoid animating fast commands
+				const timer = setTimeout(() => {
+					// Expand after 500ms - cleanup will cancel if command finished early
+					onToggleExpand(message.ts)
+				}, 500)
+
+				return () => clearTimeout(timer)
+			}
+		}, [isCommandMessage, isCommandExecuting, isExpanded, onToggleExpand, message.ts])
+
+		// Auto-collapse when command completes (only if it ran > 500ms)
+		useEffect(() => {
+			if (isCommandMessage && isCommandCompleted && !isCommandExecuting && isExpanded) {
+				// Calculate how long the command ran
+				const duration = commandStartTimeRef.current ? Date.now() - commandStartTimeRef.current : 0
+
+				// Only auto-collapse if command ran for more than 500ms
+				if (duration > 500) {
+					// Wait 1.5 seconds before auto-collapsing to let user see the completion
+					const timer = setTimeout(() => {
+						onToggleExpand(message.ts)
+					}, 1500)
+
+					return () => clearTimeout(timer)
+				}
+			}
+		}, [isCommandMessage, isCommandCompleted, isCommandExecuting, isExpanded, onToggleExpand, message.ts])
+
 		if (message.ask === "command" || message.say === "command") {
 			const splitMessage = (text: string) => {
 				const outputIndex = text.indexOf(COMMAND_OUTPUT_STRING)
@@ -888,8 +919,9 @@ export const ChatRowContent = memo(
 						style={{
 							borderRadius: 6,
 							border: "1px solid var(--vscode-editorGroup-border)",
-							overflow: "visible",
+							overflow: "hidden",
 							backgroundColor: CODE_BLOCK_BG_COLOR,
+							transition: "all 0.3s ease-in-out",
 						}}>
 						{(isCommandExecuting || isCommandCompleted) && (
 							<div
