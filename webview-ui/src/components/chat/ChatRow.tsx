@@ -842,13 +842,16 @@ export const ChatRowContent = memo(
 			if (isCommandMessage && isCommandExecuting && !isExpanded) {
 				// Wait 500ms before auto-expanding to avoid animating fast commands
 				const timer = setTimeout(() => {
-					// Expand after 500ms - cleanup will cancel if command finished early
+					// Expand after 500ms
 					onToggleExpand(message.ts)
 				}, 500)
 
 				return () => clearTimeout(timer)
 			}
-		}, [isCommandMessage, isCommandExecuting, isExpanded, onToggleExpand, message.ts])
+			// Note: We intentionally don't include isCommandExecuting in dependencies
+			// to prevent the effect from re-running when the command completes
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+		}, [isCommandMessage, isExpanded, onToggleExpand, message.ts])
 
 		// Auto-collapse when command completes (only if it ran > 500ms)
 		useEffect(() => {
